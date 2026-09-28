@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- VOCAVIA Year 2: all-class leaderboard update (2 Cemerlang, 2 Gemilang, 2 Terbilang) -->
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -1120,7 +1121,8 @@ function SetupModal({ initial, onStart }) {
             React.createElement("div", { className: "p-6 md:p-8" },
                 React.createElement("div", { className: "text-center mb-5" },
                     React.createElement("p", { className: "text-cream text-lg md:text-xl font-display font-bold" }, "Enter your pupil code"),
-                    React.createElement("p", { className: "text-cream/50 text-xs md:text-sm mt-1" }, "Your code loads your online mastery, points and streak.")),
+                    React.createElement("p", { className: "text-cream/50 text-xs md:text-sm mt-1" }, "Your code loads your online mastery, points and streak."),
+                    React.createElement("p", { className: "text-gold/55 text-[10px] md:text-xs mt-1.5 uppercase tracking-wider" }, "2 Cemerlang · 2 Gemilang · 2 Terbilang")),
                 React.createElement("div", { className: "max-w-sm mx-auto" },
                     React.createElement("input", { type: "text", value: pupilCode, maxLength: 8, autoCapitalize: "characters", autoComplete: "off", spellCheck: false, onKeyDown: onKeyDown, onChange: (e) => setPupilCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 8)), placeholder: "e.g. 2CBAER", className: "w-full rounded-xl bg-bg-deep/60 border-2 border-gold/30 px-4 py-4 text-center text-2xl md:text-3xl tracking-[0.22em] uppercase text-cream font-display font-extrabold focus:outline-none focus:border-gold transition-colors" }),
                     React.createElement("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4" },
@@ -1139,6 +1141,7 @@ function SetupModal({ initial, onStart }) {
 function LeaderboardModal({ data, onClose, onReload }) {
     const [tab, setTab] = (0, react_1.useState)(data.defaultTab || "mastery");
     const [showTesters, setShowTesters] = (0, react_1.useState)(data.includeTesters === true);
+    const [classFilter, setClassFilter] = (0, react_1.useState)("ALL");
     const [reloading, setReloading] = (0, react_1.useState)(false);
     const toggleTesters = async (e) => {
         const checked = e.target.checked;
@@ -1147,7 +1150,16 @@ function LeaderboardModal({ data, onClose, onReload }) {
         try { await onReload?.(checked); } finally { setReloading(false); }
     };
     const totalVocabulary = (0, vocabulary_1.getVocabularyCount)("year2");
-    const rows = data.leaderboards?.[tab] ?? [];
+    const allRows = data.leaderboards?.[tab] ?? [];
+    const rows = allRows
+        .filter((row) => classFilter === "ALL" || row.className === classFilter)
+        .map((row, index) => ({ ...row, rank: index + 1 }));
+    const classOptions = [
+        { id: "ALL", label: "All Classes" },
+        { id: "2 CEMERLANG", label: "2 Cemerlang" },
+        { id: "2 GEMILANG", label: "2 Gemilang" },
+        { id: "2 TERBILANG", label: "2 Terbilang" },
+    ];
     const tabs = [
         { id: "mastery", label: "Mastery", icon: lucide_react_1.Award },
         { id: "points", label: "Points", icon: lucide_react_1.Star },
@@ -1168,12 +1180,14 @@ function LeaderboardModal({ data, onClose, onReload }) {
                         React.createElement(lucide_react_1.Trophy, { className: "w-7 h-7 text-gold-bright" }),
                         React.createElement("div", null,
                             React.createElement("h2", { className: "text-2xl md:text-3xl font-display font-extrabold gold-text" }, "Year 2 Leaderboard"),
-                            React.createElement("p", { className: "text-cream/45 text-xs" }, "Mastery ranking is shown by default."))),
+                            React.createElement("p", { className: "text-cream/45 text-xs" }, "All three Year 2 classes are included. Mastery is shown by default."))),
                     React.createElement("button", { type: "button", onClick: onClose, className: "rounded-lg border border-cream/15 bg-bg-mid/60 p-2 text-cream/70 hover:text-cream hover:border-cream/30" }, React.createElement(lucide_react_1.X, { className: "w-5 h-5" }))),
                 React.createElement("div", { className: "grid grid-cols-3 gap-2 mt-4" }, tabs.map((item) => {
                     const Icon = item.icon;
                     return React.createElement("button", { key: item.id, type: "button", onClick: () => setTab(item.id), className: `rounded-xl border-2 py-2.5 px-2 font-display font-bold text-xs md:text-sm uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${tab === item.id ? "bg-gold/20 border-gold text-gold-bright panel-glow" : "bg-bg-mid/50 border-cream/10 text-cream/55 hover:border-cream/25"}` }, React.createElement(Icon, { className: "w-4 h-4" }), item.label);
                 })),
+                React.createElement("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-2 mt-3" }, classOptions.map((item) =>
+                    React.createElement("button", { key: item.id, type: "button", onClick: () => setClassFilter(item.id), className: `rounded-lg border py-2 px-2 font-display font-bold text-[10px] md:text-xs uppercase tracking-wider transition-all ${classFilter === item.id ? "bg-accent/15 border-accent/60 text-accent" : "bg-bg-mid/40 border-cream/10 text-cream/50 hover:border-cream/25"}` }, item.label))),
                 React.createElement("label", { className: "mt-3 flex items-center justify-end gap-2 text-cream/55 text-xs cursor-pointer" },
                     React.createElement("input", { type: "checkbox", checked: showTesters, disabled: reloading, onChange: toggleTesters }),
                     reloading ? "Loading tester results…" : "Show tester results")),
