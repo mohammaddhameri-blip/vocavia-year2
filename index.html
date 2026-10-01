@@ -365,7 +365,7 @@ function App() {
     const resumeAfterLeaderboardRef = (0, react_1.useRef)(false);
     const openLeaderboard = async (includeTesters = false) => {
         const pupilCode = String(game.settings.pupilCode || "").trim().toUpperCase();
-        if (!pupilCode || leaderboardLoading)
+        if (leaderboardLoading)
             return;
         const openingFromGame = !leaderboard;
         if (openingFromGame) {
@@ -377,7 +377,8 @@ function App() {
         setLeaderboardLoading(true);
         setLeaderboardError(null);
         try {
-            const data = await (0, online_1.vocaviaApi)("leaderboard", { pupilCode, includeTesters });
+            const leaderboardPayload = pupilCode ? { pupilCode, includeTesters } : { includeTesters };
+            const data = await (0, online_1.vocaviaApi)("leaderboard", leaderboardPayload);
             setLeaderboard(data);
         }
         catch (err) {
@@ -450,7 +451,7 @@ function App() {
                             React.createElement(lucide_react_1.Play, { className: "w-5 h-5" }),
                             "Resume Game")))),
                 !fullPanel && React.createElement(FeedbackOverlay_1.default, { game: game })),
-            !fullPanel && (React.createElement(GameSidebar_1.default, { scores: game.scores, playerNames: game.settings.playerNames, masteryCount: game.masteryCount, masteryTotal: game.masteryTotal, availablePoints: game.availablePoints, timeRemaining: game.timeRemaining, muted: game.muted, reducedMotion: game.reducedMotion, showNewWordButton: showNewWordButton, canPause: canPause, hintsRemaining: game.hintsRemaining, streaks: game.streaks, bestStreak: game.bestStreak, hintsUsedThisAttempt: game.hintsUsedThisAttempt, canUseHint: game.canUseHint, syncStatus: game.syncStatus, className: game.settings.className, onNewWord: game.startPick, onToggleMute: game.toggleMute, onToggleReducedMotion: game.toggleReducedMotion, onPause: game.pause, onMainMenu: game.requestMainMenu, onUseHint: game.useHint }))),
+            !fullPanel && (React.createElement(GameSidebar_1.default, { scores: game.scores, playerNames: game.settings.playerNames, masteryCount: game.masteryCount, masteryTotal: game.masteryTotal, availablePoints: game.availablePoints, timeRemaining: game.timeRemaining, muted: game.muted, reducedMotion: game.reducedMotion, showNewWordButton: showNewWordButton, canPause: canPause, hintsRemaining: game.hintsRemaining, streaks: game.streaks, bestStreak: game.bestStreak, hintsUsedThisAttempt: game.hintsUsedThisAttempt, voiceHintEligible: game.currentWordSeenBefore, canUseHint: game.canUseHint, syncStatus: game.syncStatus, className: game.settings.className, onNewWord: game.startPick, onToggleMute: game.toggleMute, onToggleReducedMotion: game.toggleReducedMotion, onPause: game.pause, onMainMenu: game.requestMainMenu, onUseHint: game.useHint }))),
         showSetup && React.createElement(SetupModal_1.default, { initial: game.settings, onStart: game.startGame }),
         leaderboard && React.createElement(SetupModal_1.LeaderboardModal, { data: leaderboard, onClose: closeLeaderboard, onReload: (includeTesters) => openLeaderboard(includeTesters) }),
         leaderboardError && React.createElement("div", { className: "fixed z-[80] top-16 right-3 left-3 sm:left-auto sm:max-w-sm rounded-xl border border-error/40 bg-bg-deep/95 px-4 py-3 shadow-xl backdrop-blur-md flex items-start gap-2" },
@@ -684,19 +685,50 @@ const RandomWordPicker_1 = __importDefault(require("./RandomWordPicker"));
 const LetterKeyboard_1 = __importDefault(require("./LetterKeyboard"));
 function getMasteryRankInfo(count, total) {
     const safeCount = Math.max(0, Math.min(count, total));
-    if (safeCount >= 300)
-        return { rank: "CHAMPION", subtitle: safeCount >= total ? "You have mastered the complete Year 2 vocabulary level!" : `Master all ${total} words to complete this vocabulary level.` };
-    if (safeCount >= 250)
-        return { rank: "SAGE", subtitle: total <= 300 ? `Master all ${total} words to complete this vocabulary level.` : "Reach 300 mastered words to become Champion." };
-    if (safeCount >= 200)
-        return { rank: "MASTER", subtitle: total <= 250 ? `Master all ${total} words to complete this vocabulary level.` : "Reach 250 mastered words to become Sage." };
-    if (safeCount >= 150)
-        return { rank: "EXPERT", subtitle: total <= 200 ? `Master all ${total} words to complete this vocabulary level.` : "Reach 200 mastered words to become Master." };
-    if (safeCount >= 100)
-        return { rank: "SKILLED", subtitle: total <= 150 ? `Master all ${total} words to complete this vocabulary level.` : "Reach 150 mastered words to become Expert." };
-    if (safeCount >= 50)
-        return { rank: "ADEPT", subtitle: total <= 100 ? `Master all ${total} words to complete this vocabulary level.` : "Reach 100 mastered words to become Skilled." };
-    return { rank: "NOVICE", subtitle: safeCount === 0 ? "Master your first 50 words to become an Adept." : "Master 50 words to become an Adept." };
+    const ranks = [
+        { min: 0, name: "DISCIPLE I" },
+        { min: 9, name: "DISCIPLE II" },
+        { min: 18, name: "DISCIPLE III" },
+        { min: 27, name: "SCHOLAR I" },
+        { min: 39, name: "SCHOLAR II" },
+        { min: 50, name: "SCHOLAR III" },
+        { min: 62, name: "MASTER IV" },
+        { min: 74, name: "MASTER III" },
+        { min: 86, name: "MASTER II" },
+        { min: 98, name: "MASTER I" },
+        { min: 110, name: "GRANDMASTER V" },
+        { min: 125, name: "GRANDMASTER IV" },
+        { min: 139, name: "GRANDMASTER III" },
+        { min: 154, name: "GRANDMASTER II" },
+        { min: 169, name: "GRANDMASTER I" },
+        { min: 184, name: "EPIC V" },
+        { min: 199, name: "EPIC IV" },
+        { min: 214, name: "EPIC III" },
+        { min: 228, name: "EPIC II" },
+        { min: 243, name: "EPIC I" },
+        { min: 258, name: "LEGEND V" },
+        { min: 273, name: "LEGEND IV" },
+        { min: 288, name: "LEGEND III" },
+        { min: 303, name: "LEGEND II" },
+        { min: 317, name: "LEGEND I" },
+        { min: 332, name: "MYTHIC" },
+        { min: 407, name: "MYTHICAL HONOR" },
+        { min: 481, name: "MYTHICAL GLORY" },
+    ];
+    if (safeCount >= total && total > 0)
+        return { rank: "MYTHICAL IMMORTAL", subtitle: `Complete mastery — ${total}/${total} words mastered!` };
+    let current = ranks[0];
+    let next = null;
+    for (let i = 0; i < ranks.length; i++) {
+        if (safeCount >= ranks[i].min) {
+            current = ranks[i];
+            next = ranks[i + 1] ?? null;
+        }
+    }
+    const subtitle = next
+        ? `Reach ${next.min} mastered words to become ${next.name}.`
+        : `Master all ${total} words to reach Mythical Immortal.`;
+    return { rank: current.name, subtitle };
 }
 function GameBoard({ game }) {
     const { phase, word, tiles, feedback, settings, reducedMotion } = game;
@@ -717,7 +749,7 @@ function GameBoard({ game }) {
         React.createElement("div", { className: "shrink-0 px-2 md:px-4 pt-2 pb-1" },
             React.createElement(DescriptionCard_1.default, { description: word?.description ?? "", hidden: !word || phase === "picking" || phase === "ready" || phase === "roundComplete" || phase === "paused" })),
         word && phase !== "picking" && phase !== "ready" && phase !== "roundComplete" && (React.createElement("div", { className: "shrink-0 text-center pb-1" },
-            React.createElement("span", { className: "text-accent text-[10px] md:text-xs font-display font-bold uppercase tracking-[0.3em]" }, "Year 2 Vocabulary"))),
+            React.createElement("span", { className: "text-accent text-[10px] md:text-xs font-display font-bold uppercase tracking-[0.3em]" }, "Year 2–4 Vocabulary"))),
         React.createElement("div", { className: "flex-1 min-h-0 flex flex-col items-center justify-center px-2 md:px-4 overflow-y-auto" },
             showPicker && (React.createElement(RandomWordPicker_1.default, { active: phase === "picking", reducedMotion: reducedMotion, onPlayTick: () => game.sound?.play?.("pick"), onComplete: game.finishPick })),
             showReady && (React.createElement("div", { className: "text-center py-6 animate-fade-in-up" },
@@ -748,11 +780,12 @@ exports.default = GameSidebar;
 const lucide_react_1 = require("lucide-react");
 const Scoreboard_1 = __importDefault(require("./Scoreboard"));
 const Timer_1 = __importDefault(require("./Timer"));
-function GameSidebar({ scores, playerNames, masteryCount, masteryTotal, availablePoints, timeRemaining, muted, showNewWordButton, canPause, hintsRemaining, streaks, bestStreak, hintsUsedThisAttempt, canUseHint, syncStatus, className, onNewWord, onToggleMute, onPause, onMainMenu, onUseHint, }) {
+function GameSidebar({ scores, playerNames, masteryCount, masteryTotal, availablePoints, timeRemaining, muted, showNewWordButton, canPause, hintsRemaining, streaks, bestStreak, hintsUsedThisAttempt, voiceHintEligible, canUseHint, syncStatus, className, onNewWord, onToggleMute, onPause, onMainMenu, onUseHint, }) {
     const activeHints = hintsRemaining[0];
     const activeStreak = streaks[0];
-    const nextHintText = activeHints === 0 ? "All hints used" : hintsUsedThisAttempt < 2 ? `Hint ${hintsUsedThisAttempt + 1}: Reveal a letter` : "Hint 3: Unlock pronunciation";
-    const hintButtonText = activeHints === 0 ? "No Hints Left" : hintsUsedThisAttempt < 2 ? `Hint ${hintsUsedThisAttempt + 1}` : "Hint 3 · Sound";
+    const thirdHintIsVoice = voiceHintEligible === true && hintsUsedThisAttempt >= 2;
+    const nextHintText = activeHints === 0 ? "All hints used" : hintsUsedThisAttempt < 2 ? `Hint ${hintsUsedThisAttempt + 1}: Reveal a letter` : thirdHintIsVoice ? "Hint 3: Unlock pronunciation" : "Hint 3: Reveal a letter";
+    const hintButtonText = activeHints === 0 ? "No Hints Left" : hintsUsedThisAttempt < 2 ? `Hint ${hintsUsedThisAttempt + 1}` : thirdHintIsVoice ? "Hint 3 · Sound" : "Hint 3";
     const syncClass = syncStatus === "online" ? "text-success" : syncStatus === "syncing" ? "text-warning" : "text-error";
     const SyncIcon = syncStatus === "online" ? lucide_react_1.Cloud : syncStatus === "syncing" ? lucide_react_1.RefreshCw : lucide_react_1.CloudOff;
     return (React.createElement("aside", { className: "flex flex-col gap-2 p-2 md:p-3 bg-bg-mid/70 backdrop-blur-md border-l border-gold/20 h-full overflow-y-auto" },
@@ -781,7 +814,7 @@ function GameSidebar({ scores, playerNames, masteryCount, masteryTotal, availabl
                 React.createElement("span", { className: "text-xs font-display font-bold text-cream tabular-nums" }, activeStreak)),
             React.createElement("p", { className: "text-[9px] text-cream/45 mt-1" }, `Best streak: ${bestStreak}`)),
         React.createElement("button", { type: "button", disabled: !canUseHint, onClick: onUseHint, className: `w-full rounded-xl font-display font-bold uppercase tracking-wider py-2.5 px-3 transition-all flex items-center justify-center gap-2 text-sm ${canUseHint ? "bg-gradient-to-r from-accent to-cyan-600 text-bg-deep hover:scale-[1.03] active:scale-95 shadow-lg shadow-accent/20" : "bg-bg-mid/40 text-cream/30 border border-cream/10 cursor-not-allowed"}` },
-            hintsUsedThisAttempt >= 2 && activeHints > 0 ? React.createElement(lucide_react_1.Volume2, { className: "w-4 h-4" }) : React.createElement(lucide_react_1.Lightbulb, { className: "w-4 h-4" }),
+            thirdHintIsVoice && activeHints > 0 ? React.createElement(lucide_react_1.Volume2, { className: "w-4 h-4" }) : React.createElement(lucide_react_1.Lightbulb, { className: "w-4 h-4" }),
             hintButtonText),
         React.createElement("button", { type: "button", disabled: !showNewWordButton, onClick: onNewWord, className: `w-full rounded-xl font-display font-bold uppercase tracking-wider py-2.5 px-3 transition-all flex items-center justify-center gap-2 text-sm ${showNewWordButton ? "bg-gradient-to-r from-gold to-gold-deep text-bg-deep hover:scale-[1.03] hover:shadow-lg hover:shadow-gold/30 active:scale-95" : "bg-bg-mid/50 text-cream/30 border border-cream/10 cursor-not-allowed"}` },
             React.createElement(lucide_react_1.Sparkles, { className: "w-4 h-4" }), "New Random Word"),
@@ -944,7 +977,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = MasteryCertificate;
 const lucide_react_1 = require("lucide-react");
 function modeLabel(mode) {
-    return "Year 2 Vocabulary";
+    return "Year 2–4 Vocabulary";
 }
 function MasteryCertificate({ game }) {
     const certificate = game.masteryCertificate;
@@ -1142,16 +1175,14 @@ function SetupModal({ initial, onStart }) {
         }
     };
     const handleLeaderboard = async (includeTesters = false) => {
-        if (!validateCode())
-            return;
         setLeaderboardLoading(true);
         setError(null);
         try {
-            const data = await (0, online_1.vocaviaApi)("leaderboard", { pupilCode: cleanCode, includeTesters });
+            const data = await (0, online_1.vocaviaApi)("leaderboard", { includeTesters });
             setLeaderboard(data);
         }
         catch (err) {
-            setError(err?.message === "Pupil code not found" ? "Pupil code not found. Please check your code." : "Could not load the leaderboard. Check your internet connection and try again.");
+            setError("Could not load the leaderboard. Check your internet connection and try again.");
         }
         finally {
             setLeaderboardLoading(false);
@@ -1183,11 +1214,49 @@ function SetupModal({ initial, onStart }) {
                         React.createElement("button", { type: "button", disabled: loading || leaderboardLoading, onClick: () => void handleLeaderboard(false), className: "rounded-xl bg-panel/80 border-2 border-gold/35 text-gold-bright font-display font-extrabold uppercase tracking-wider py-3.5 hover:bg-panel-glow/60 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50" },
                             leaderboardLoading ? React.createElement(lucide_react_1.LoaderCircle, { className: "w-5 h-5 animate-spin" }) : React.createElement(lucide_react_1.Trophy, { className: "w-5 h-5" }),
                             "Leaderboard")),
+                    React.createElement("p", { className: "text-center text-cream/40 text-[10px] md:text-xs mt-2" }, "Leaderboard can be viewed without entering a code."),
                     error && (React.createElement("p", { className: "text-error text-sm font-body text-center bg-error/10 border border-error/30 rounded-lg py-2 px-3 mt-4" }, error)),
                     React.createElement("div", { className: "mt-5 rounded-xl bg-bg-mid/45 border border-cream/10 px-4 py-3 flex items-start gap-2" },
                         React.createElement(lucide_react_1.Cloud, { className: "w-4 h-4 text-accent mt-0.5 shrink-0" }),
                         React.createElement("p", { className: "text-cream/50 text-xs leading-relaxed" }, "Internet connection is required to load and save your online progress.")))),
             leaderboard && React.createElement(LeaderboardModal, { data: leaderboard, onClose: () => setLeaderboard(null), onReload: (includeTesters) => handleLeaderboard(includeTesters) }))));
+}
+function leaderboardGivenName(name) {
+    const clean = String(name ?? "").trim();
+    const given = clean.replace(/\s+(?:BIN|BINTI)\s+.*$/i, "").trim();
+    return given || clean || "Pupil";
+}
+function leaderboardMasteryRank(count, total) {
+    const safeCount = Math.max(0, Math.min(Number(count) || 0, total));
+    if (safeCount >= total && total > 0) return "MYTHICAL IMMORTAL";
+    if (safeCount >= 481) return "MYTHICAL GLORY";
+    if (safeCount >= 407) return "MYTHICAL HONOR";
+    if (safeCount >= 332) return "MYTHIC";
+    if (safeCount >= 317) return "LEGEND I";
+    if (safeCount >= 303) return "LEGEND II";
+    if (safeCount >= 288) return "LEGEND III";
+    if (safeCount >= 273) return "LEGEND IV";
+    if (safeCount >= 258) return "LEGEND V";
+    if (safeCount >= 243) return "EPIC I";
+    if (safeCount >= 228) return "EPIC II";
+    if (safeCount >= 214) return "EPIC III";
+    if (safeCount >= 199) return "EPIC IV";
+    if (safeCount >= 184) return "EPIC V";
+    if (safeCount >= 169) return "GRANDMASTER I";
+    if (safeCount >= 154) return "GRANDMASTER II";
+    if (safeCount >= 139) return "GRANDMASTER III";
+    if (safeCount >= 125) return "GRANDMASTER IV";
+    if (safeCount >= 110) return "GRANDMASTER V";
+    if (safeCount >= 98) return "MASTER I";
+    if (safeCount >= 86) return "MASTER II";
+    if (safeCount >= 74) return "MASTER III";
+    if (safeCount >= 62) return "MASTER IV";
+    if (safeCount >= 50) return "SCHOLAR III";
+    if (safeCount >= 39) return "SCHOLAR II";
+    if (safeCount >= 27) return "SCHOLAR I";
+    if (safeCount >= 18) return "DISCIPLE III";
+    if (safeCount >= 9) return "DISCIPLE II";
+    return "DISCIPLE I";
 }
 function LeaderboardModal({ data, onClose, onReload }) {
     const [tab, setTab] = (0, react_1.useState)(data.defaultTab || "mastery");
@@ -1221,7 +1290,7 @@ function LeaderboardModal({ data, onClose, onReload }) {
             return `${Number(row.totalPoints).toLocaleString()} pts`;
         if (tab === "streak")
             return `🔥 ${row.bestStreak}`;
-        return `${row.masteryCount}/${totalVocabulary} · ${row.masteryRank}`;
+        return `${row.masteryCount}/${totalVocabulary} · ${leaderboardMasteryRank(row.masteryCount, totalVocabulary)}`;
     };
     return (React.createElement("div", { className: "fixed inset-0 z-[70] flex items-center justify-center bg-bg-deep/95 backdrop-blur-md p-3 md:p-6" },
         React.createElement("div", { className: "w-full max-w-3xl max-h-[90vh] flex flex-col bg-gradient-to-b from-panel to-bg-mid rounded-3xl border-2 border-gold/45 panel-glow animate-scale-in overflow-hidden" },
@@ -1246,7 +1315,7 @@ function LeaderboardModal({ data, onClose, onReload }) {
                 React.createElement("div", { className: "space-y-2" }, rows.map((row) => (React.createElement("div", { key: row.studentId, className: `grid grid-cols-[46px_1fr_auto] items-center gap-2 md:gap-4 rounded-xl border px-3 md:px-4 py-3 ${row.isMe ? "bg-gold/15 border-gold/70 panel-glow" : "bg-bg-deep/35 border-cream/10"}` },
                     React.createElement("div", { className: `text-center font-display font-extrabold text-lg ${row.rank <= 3 ? "text-gold-bright" : "text-cream/55"}` }, `#${row.rank}`),
                     React.createElement("div", { className: "min-w-0" },
-                        React.createElement("div", { className: `font-display font-bold truncate ${row.isMe ? "text-gold-bright" : "text-cream"}` }, row.name),
+                        React.createElement("div", { className: `font-display font-bold leading-tight whitespace-normal break-words ${row.isMe ? "text-gold-bright" : "text-cream"}` }, leaderboardGivenName(row.name)),
                         React.createElement("div", { className: "text-cream/40 text-[10px] md:text-xs uppercase tracking-wider" }, row.className, row.isTester ? " · TESTER" : "", row.isMe ? " · YOU" : "")),
                     React.createElement("div", { className: "text-right font-display font-extrabold text-sm md:text-base text-cream whitespace-nowrap" }, valueFor(row))))))))));
 }
@@ -1277,11 +1346,35 @@ function Timer({ timeRemaining }) {
 }
 
 };
+__mods["src/data/year34Vocabulary.ts"] = function(require,module,exports){
+const React = require("react");
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.YEAR4_VOCABULARY = exports.YEAR3_VOCABULARY = void 0;
+const makeWords = (entries) => entries.map(([answer, description]) => ({ answer, description }));
+const YEAR3_WORDS = [["add","To put one thing together with another."],["afternoon","The part of the day between midday and evening."],["alien","A creature from another planet in stories."],["alphabet","All the letters used to write a language."],["angry","Feeling upset and wanting to show it."],["answer","A reply to a question."],["armchair","A comfortable chair with supports for your arms."],["ask","To say something because you want information."],["baby","A very young child."],["baseball","A sport played with a bat and ball."],["basketball","A sport where players throw a ball through a high hoop."],["bat","A piece of sports equipment used to hit a ball."],["bath","Washing your body in a tub of water."],["beach","A sandy or stony place beside the sea."],["bean","A small seed eaten as a vegetable."],["bear","A large wild animal with thick fur."],["bed","A piece of furniture used for sleeping."],["birthday","The day each year when a person celebrates being born."],["board","A flat surface used for writing or displaying things."],["body","All the physical parts of a person or animal."],["bookcase","A piece of furniture with shelves for books."],["bookshop","A shop where books are sold."],["boots","Shoes that cover the foot and part of the leg."],["bounce","To move up again after hitting a surface."],["box","A container with flat sides, usually square or rectangular."],["boy","A male child."],["bread","Food baked from flour and water."],["breakfast","The first meal of the day."],["burger","A round sandwich with a cooked filling inside a bun."],["bus","A large road vehicle that carries many passengers."],["camera","A device used to take photographs or videos."],["chair","A seat for one person, usually with a back."],["child","A young person who is not yet an adult."],["chips","Thin pieces of potato cooked until crisp or fried."],["chocolate","A sweet food made from cocoa."],["choose","To decide which person or thing you want."],["christian","A person who follows Christianity."],["church","A building where Christians worship."],["clap","To hit your hands together to make a sound."],["class","A group of pupils who learn together."],["classmate","A pupil who is in the same class as you."],["classroom","A room in a school where lessons happen."],["clock","A device that shows the time."],["close","To shut something such as a door or book."],["closed","Not open."],["clothes","Things people wear on their bodies."],["colour","What makes something look red, blue, green, and so on."],["complete","To finish something so that nothing is missing."],["correct","Right and without a mistake."],["count","To say numbers in order to find how many there are."],["cousin","The child of your aunt or uncle."],["crayon","A coloured wax stick used for drawing."],["cross","A mark made by two lines that meet."],["cupboard","A cabinet with shelves used for storing things."],["dad","An informal word for father."],["dinner","A main meal, often eaten in the evening."],["dirty","Not clean."],["donkey","An animal like a small horse with long ears."],["door","A movable panel used to enter or leave a room or building."],["double","Two times as much or two of the same thing."],["draw","To make a picture using a pencil, pen, or similar tool."],["drawing","A picture made with a pencil, pen, or similar tool."],["dress","A one-piece item of clothing often worn by girls or women."],["drink","A liquid that you can swallow, or the act of swallowing it."],["drive","To control a car or other road vehicle."],["ear","The body part used for hearing."],["egg","An oval food laid by birds such as chickens."],["eighty","The number 80."],["end","The final part of something."],["english","The language used in countries such as the United Kingdom and Australia."],["enjoy","To like doing or experiencing something."],["evening","The later part of the day before night."],["example","Something that shows what a thing or idea is like."],["eye","The body part used for seeing."],["face","The front part of the head with the eyes, nose, and mouth."],["family","A group of related people such as parents and children."],["fantastic","Very good, exciting, or impressive."],["father","A male parent."],["fifty","The number 50."],["fishing","The activity of trying to catch fish."],["flat","A home that is one set of rooms inside a larger building."],["floor","The surface you walk on inside a room."],["flower","The colourful part of a plant that can produce seeds."],["food","Things people or animals eat."],["forty","The number 40."],["friend","A person you like and enjoy spending time with."],["fries","Thin pieces of potato cooked in hot oil."],["game","An activity played for fun, often with rules."],["girl","A female child."],["give","To hand or provide something to another person."],["glasses","Lenses worn in front of the eyes to help someone see."],["goodbye","A word said when leaving someone."],["grandfather","The father of your mother or father."],["grandma","An informal word for grandmother."],["grandmother","The mother of your mother or father."],["grandpa","An informal word for grandfather."],["grape","A small round fruit that grows in bunches."],["grey","A colour between black and white."],["guitar","A musical instrument with strings played by hand."],["hair","The strands that grow on a person's head."],["handbag","A small bag carried for personal items."],["happy","Feeling pleased or joyful."],["helicopter","An aircraft with large blades that spin on top."],["help","To make something easier for another person."],["hippo","A very large African animal that spends much time in water."],["hit","To touch something with force."],["hobby","An activity you enjoy doing in your free time."],["hockey","A sport in which players use sticks to move a ball or puck."],["hold","To keep something in your hands or arms."],["home","The place where a person lives."],["hooray","A word shouted to show happiness or celebration."],["house","A building where people live."],["hundred","The number 100."],["keyboard","A set of keys used to type on a computer."],["kick","To hit something with your foot."],["kid","An informal word for a child."],["kiwi","A small fruit with brown skin and green flesh."],["know","To have information in your mind."],["lamp","A device that gives light."],["learn","To gain knowledge or a new skill."],["left","The side opposite right."],["lemon","A sour yellow citrus fruit."],["lemonade","A sweet drink made with lemon flavour or juice."],["lesson","A period of time when someone is taught something."],["letter","One symbol used to write words, such as A or B."],["lime","A small green citrus fruit with sour juice."],["line","A long narrow mark or a row of people or things."],["look","To direct your eyes towards something."],["lorry","A large road vehicle used to carry goods."],["love","To care very deeply about someone or something."],["man","An adult male person."],["mango","A sweet tropical fruit with yellow or orange flesh."],["many","A large number of people or things."],["mat","A small piece of material placed on a floor or surface."],["meat","Food that comes from the flesh of animals."],["meatballs","Small round balls of cooked minced meat."],["milk","A white drink produced by mammals and commonly drunk by people."],["mirror","A surface that shows your reflection."],["monkey","An animal that often climbs trees and has hands like ours."],["morning","The early part of the day before midday."],["mosque","A building where Muslims worship."],["mother","A female parent."],["motorbike","A two-wheeled motor vehicle."],["mouse","A small animal with a pointed nose and long tail."],["mouth","The opening in the face used for eating and speaking."],["ninety","The number 90."],["nose","The part of the face used for smelling and breathing."],["number","A symbol or word used for counting."],["page","One side of a sheet in a book or notebook."],["painting","A picture made using paint."],["paper","Thin material used for writing, drawing, or wrapping."],["pardon","A polite word used when asking someone to repeat something."],["part","One piece or section of a whole."],["person","One human being."],["pet","An animal kept at home for company."],["phone","A device used to call or message people."],["pie","A baked dish with pastry around or under a filling."],["playground","An outdoor area where children can play."],["point","To show a place or object using your finger."],["poster","A large printed sheet with information or pictures."],["pray","To speak to God as part of worship."],["question","A sentence used to ask for information."],["radio","A device or service used to listen to broadcast programmes."],["really","A word used to mean very or in fact."],["rice","Small grains cooked and eaten as a common food."],["right","The side opposite left, or something that is correct."],["room","A separate space inside a building."],["rug","A small carpet that covers part of a floor."],["sad","Feeling unhappy."],["say","To speak words."],["scary","Making you feel afraid."],["school","A place where pupils go to learn."],["sentence","A group of words that expresses a complete idea."],["seventy","The number 70."],["ship","A large boat used on the sea."],["shop","A place where things are sold."],["show","To let someone see something."],["skateboard","A short board with wheels that a person rides on."],["skateboarding","The activity of riding on a short board with wheels."],["smile","A happy expression made by turning up the corners of the mouth."],["soccer","A game where players mainly use their feet to move a ball into a goal."],["sofa","A long soft seat for two or more people."],["some","An amount or number that is not exact."],["sometimes","On some occasions, but not always."],["song","A piece of music with words that are sung."],["spell","To say or write the letters of a word in order."],["sport","A physical game or activity with rules."],["stand","To be upright on your feet."],["start","To begin something."],["story","A description of events, real or imagined."],["straight","Not bent or curved; going directly ahead."],["street","A road in a town or city with buildings beside it."],["swim","To move through water using your arms and legs."],["table","A piece of furniture with a flat top and legs."],["tablet","A small flat touchscreen computer."],["tail","The part that extends from the back of many animals."],["talk","To speak with someone."],["teacher","A person whose job is to help pupils learn."],["teddy","A soft toy bear."],["temple","A building used for religious worship."],["than","A word used when comparing two things."],["thanks","A word used to show that you are grateful."],["thirty","The number 30."],["throw","To send something through the air using your hand or arm."],["tick","A small mark used to show that something is correct or chosen."],["today","The present day."],["tomorrow","The day after today."],["too","More than needed, or also."],["toy","An object children play with."],["try","To make an effort to do something."],["under","In a lower position than something else."],["understand","To know what something means."],["wall","A vertical side of a room or building."],["watch","To look at something for a period of time."],["water","A clear liquid that people, animals, and plants need to live."],["watermelon","A large fruit with green skin and juicy red or yellow flesh."],["wave","To move your hand from side to side as a greeting."],["well","In a good or satisfactory way."],["white","A very light colour like fresh snow."],["woman","An adult female person."],["word","A group of letters or sounds that carries meaning."],["wow","A word used to show surprise or strong admiration."],["year","A period of twelve months."],["yellow","A bright colour like a ripe lemon."],["young","Not old; having lived for only a short time."],["zebra","An African animal like a horse with black and white stripes."],["zoo","A place where people can see many kinds of animals."],["hindu","A person who follows Hinduism."],["muslim","A person who follows Islam."]];
+const YEAR4_WORDS = [["above","In a higher position than something else."],["address","The details that tell where a person or place can be found."],["afraid","Feeling fear or worry."],["after","Later than a particular time or event."],["age","The number of years a person or thing has existed."],["asleep","Sleeping and not awake."],["aunt","The sister of a parent, or the wife of an uncle."],["awake","Not sleeping."],["back","The rear part of a body or object."],["bad","Not good or not pleasant."],["badly","In a poor or unsuccessful way."],["balcony","A platform that sticks out from an upper floor of a building."],["beard","Hair that grows on a man's chin and cheeks."],["because","A word used to give a reason."],["before","Earlier than a particular time or event."],["below","In a lower position than something else."],["best","Better than all the others."],["better","Of higher quality or more suitable than another."],["boring","Not interesting or exciting."],["both","The two people or things together."],["bottle","A container with a narrow top, often used for liquids."],["bottom","The lowest part of something."],["bowl","A round deep container used for food or liquid."],["brave","Able to face danger or fear without giving up."],["break","To damage something so that it separates or stops working."],["brilliant","Very clever, successful, or excellent."],["bring","To carry something towards a person or place."],["build","To make something by putting parts together."],["building","A structure with walls and a roof, such as a house or school."],["buy","To get something by paying money for it."],["cafe","A small place where people can buy drinks and simple meals."],["cage","A container made with bars or wire for keeping an animal."],["call","To speak to someone by phone or shout to get attention."],["careful","Taking care to avoid mistakes or danger."],["carefully","In a way that avoids mistakes or danger."],["carry","To hold something while moving it from one place to another."],["centre","The middle point or main part of a place."],["change","To make or become different."],["cinema","A place where people go to watch films on a large screen."],["circus","A show with performers such as acrobats and clowns."],["city","A large and important town."],["climb","To move upwards using your hands and feet."],["cloud","A white or grey mass of tiny water drops in the sky."],["clown","A funny performer who often wears bright clothes and makeup."],["coat","An outer piece of clothing worn for warmth."],["coffee","A dark drink made from roasted beans."],["comic","A book or magazine that tells stories using drawings and speech bubbles."],["cook","To prepare food by heating it."],["cough","To force air out of the throat with a sudden sound."],["could","A word used to talk about ability in the past or a possibility."],["countryside","Land outside towns and cities, often with farms and fields."],["cry","To produce tears because of sadness, pain, or strong emotion."],["cup","A small open container used for drinking."],["curly","Having hair or lines that form curves or rings."],["dangerous","Likely to cause harm or injury."],["daughter","A female child in relation to her parents."],["dentist","A person whose job is to care for teeth."],["difference","The way in which two things are not the same."],["different","Not the same as another person or thing."],["difficult","Not easy to do or understand."],["doctor","A person trained to treat people who are ill or injured."],["dolphin","An intelligent sea mammal with a long nose-like mouth."],["down","Towards a lower place or position."],["downstairs","On or towards a lower floor of a building."],["dream","Pictures, thoughts, or events experienced while sleeping."],["driver","A person who controls a car or other vehicle."],["drop","To let something fall from your hand or a higher place."],["dry","Not wet or covered with water."],["earache","Pain inside or around the ear."],["easy","Not difficult and requiring little effort."],["e-book","A book that is read on a digital device."],["email","A message sent electronically over the internet."],["every","Each one in a group, without exception."],["everyone","Every person in a group."],["everything","All things."],["exciting","Making you feel very interested and eager."],["fair","Reasonable and treating people equally."],["fall","To move downwards suddenly without intending to."],["farm","Land and buildings used for growing crops or keeping animals."],["farmer","A person who works on a farm."],["feed","To give food to a person or animal."],["field","An open area of land, often used for crops or animals."],["film","A story shown as moving pictures on a screen."],["first","Coming before all others in order."],["fix","To repair something that is broken or not working."],["frightened","Feeling afraid."],["funfair","A place with rides, games, and attractions for entertainment."],["glass","A hard transparent material, or a container used for drinking."],["goal","A target in sport where a team tries to score."],["granddaughter","A daughter's or son's daughter."],["grandparent","A grandmother or grandfather."],["grandson","A daughter's or son's son."],["grown-up","An adult person."],["headache","Pain in the head."],["hers","Belonging to a female person already mentioned."],["hide","To put yourself or something where it cannot easily be seen."],["holiday","A period when you do not go to school or work, often for rest or travel."],["homework","School work that pupils do outside class."],["hop","To jump on one foot or make a small jump."],["hospital","A place where sick or injured people receive medical care."],["huge","Very large."],["hurt","To cause pain or to feel pain."],["ice","Frozen water."],["ill","Not well; sick."],["inside","In the inner part of something."],["internet","A worldwide network that connects computers and devices."],["invite","To ask someone to come to an event or place."],["island","Land completely surrounded by water."],["kitten","A young cat."],["laptop","A portable computer that can be used on your lap."],["last","Coming after all others, or most recent."],["laugh","To make sounds because something is funny or you are happy."],["library","A place where books and other materials can be borrowed or read."],["lift","A machine that carries people up and down between floors."],["lion","A large wild cat; the male usually has a mane."],["little","Small in size or amount."],["lose","To no longer have something or to fail to win."],["loud","Making a lot of sound."],["loudly","With a lot of sound."],["lunch","A meal usually eaten around midday."],["machine","A device with moving parts that does a particular job."],["market","A place where people buy and sell food or other goods."],["matter","A problem or subject being discussed."],["mean","To have a particular meaning or intention."],["message","Information sent from one person to another."],["milkshake","A cold sweet drink made by mixing milk with flavouring or ice cream."],["mine","Belonging to the person who is speaking."],["mistake","Something done or written incorrectly."],["model","A small copy of something, or an example used to show how it looks."],["moon","The natural object that moves around Earth and is seen at night."],["more","A larger amount or number."],["most","The greatest amount or number."],["moustache","Hair that grows above a man's upper lip."],["move","To change position or go from one place to another."],["naughty","Behaving badly or not following rules."],["near","Close in distance."],["neck","The part of the body between the head and shoulders."],["need","To require something because it is necessary."],["net","Material made of strings with spaces between them, used in games or fishing."],["noise","A sound, especially one that is loud or unwanted."],["noodles","Long thin strips of dough cooked and eaten as food."],["nothing","Not anything."],["nurse","A person trained to care for sick or injured people."],["off","Away from a place or not operating."],["only","No more than one or no more than the stated amount."],["opposite","On the other side from something."],["ours","Belonging to us."],["out","Not inside; away from the inside."],["pair","Two things that belong or are used together."],["panda","A black-and-white bear from China that eats bamboo."],["parent","A mother or father."],["party","A social event where people meet to celebrate or have fun."],["pasta","Food made from flour and water, such as spaghetti or macaroni."],["picnic","A meal eaten outdoors."],["pirate","A person in stories or history who attacks ships and steals from them."],["place","A particular area, position, or location."],["plant","A living thing that usually grows in soil and has leaves."],["plate","A flat round dish used for serving food."],["player","A person who takes part in a game or sport."],["pool","An area filled with water for swimming."],["practice","Regular activity done to improve a skill."],["practise","To do an activity repeatedly in order to improve."],["present","A gift given to someone."],["pretty","Pleasant or attractive to look at."],["puppy","A young dog."],["quick","Done or moving fast."],["quickly","At a fast speed."],["quiet","Making little or no noise."],["quietly","With little or no noise."],["rabbit","A small animal with long ears that can hop."],["rain","Water that falls from clouds."],["rainbow","A curved band of colours seen in the sky after rain."],["ride","To travel on a bicycle, motorbike, horse, or similar thing."],["river","A large natural stream of water flowing across land."],["road","A route with a hard surface used by vehicles."],["roof","The top covering of a building."],["round","Shaped like a circle or ball."],["safe","Not in danger or likely to be harmed."],["sail","To travel on water in a boat or ship."],["salad","A cold dish usually made with raw vegetables or fruit."],["sauce","A liquid or thick food added to other food for flavour."],["scarf","A long piece of cloth worn around the neck or head."],["score","To get a point or goal in a game."],["seat","Something designed for a person to sit on."],["second","Coming after first in order."],["send","To cause a message or object to go to another person or place."],["shape","The outer form of something, such as a circle or square."],["shoulder","The body part where the arm joins the body."],["shout","To speak very loudly."],["shower","A wash under water that sprays down from above."],["sick","Ill or not feeling well."],["skate","To move on ice or a smooth surface using skates."],["sky","The space above Earth that we see when we look up."],["slow","Moving or happening at a low speed."],["slowly","At a low speed."],["snail","A small animal with a soft body and usually a shell."],["someone","An unknown or unnamed person."],["something","An unknown or unnamed thing."],["son","A male child in relation to his parents."],["soup","A liquid food made by cooking vegetables, meat, or other ingredients in water."],["star","A bright object in the night sky that is a distant sun."],["station","A place where buses or trains regularly stop."],["stomach","The part of the body where food goes after it is swallowed."],["stomach-ache","Pain in the stomach area."],["supermarket","A large shop that sells food and many household goods."],["surprised","Feeling something unexpected has happened."],["sweet","Having a sugary taste."],["swimsuit","Clothing worn for swimming."],["take","To move or carry something from one place to another."],["tall","Having greater than average height."],["tea","A drink made by soaking leaves in hot water."],["teach","To help someone learn knowledge or a skill."],["temperature","A measure of how hot or cold something is."],["terrible","Very bad or unpleasant."],["text","Written words, or a short message sent by phone."],["theirs","Belonging to them."],["then","At that time or after that."],["thin","Having little distance from one side to the other."],["third","Coming after second in order."],["thirsty","Needing or wanting a drink."],["ticket","A small paper or digital pass that allows entry or travel."],["tired","Needing rest or sleep."],["tooth","One hard white part in the mouth used for biting and chewing."],["toothache","Pain in or around a tooth."],["towel","A piece of cloth used for drying the body or other things."],["town","A place with many streets and buildings, smaller than a city."],["travel","To go from one place to another, especially over a distance."],["treasure","Valuable objects such as gold, jewels, or money."],["uncle","The brother of a parent, or the husband of an aunt."],["up","Towards a higher place or position."],["upstairs","On or towards a higher floor of a building."],["wait","To stay until something happens or someone arrives."],["wake","To stop sleeping."],["wash","To clean something using water."],["waterfall","Water dropping over the edge of a high rock or cliff."],["weak","Not strong."],["weather","The conditions outside, such as rain, sun, wind, or temperature."],["website","A group of pages on the internet under one address."],["weekend","Saturday and Sunday, or the end of the working week."],["wet","Covered with or containing water."],["when","A word used to ask or talk about time."],["whose","A word used to ask who something belongs to."],["why","A word used to ask for a reason."],["wind","Moving air outdoors."],["windy","Having a lot of moving air."],["work","An activity or job that needs effort."],["world","The Earth and all the people and places on it."],["worse","More bad, difficult, or unpleasant than something else."],["worst","More bad, difficult, or unpleasant than all others."],["wrong","Not correct."],["eid","A Muslim celebration or festival."],["festival","A special event or period of celebration."],["hajj","The Muslim pilgrimage to Makkah."]];
+exports.YEAR3_VOCABULARY = [{
+    id: "y3-master",
+    year: "year3",
+    unitNumber: 0,
+    title: "Year 3 DSKP Vocabulary",
+    words: makeWords(YEAR3_WORDS),
+}];
+exports.YEAR4_VOCABULARY = [{
+    id: "y4-master",
+    year: "year4",
+    unitNumber: 0,
+    title: "Year 4 DSKP Vocabulary",
+    words: makeWords(YEAR4_WORDS),
+}];
+
+};
 __mods["src/data/vocabulary.ts"] = function(require,module,exports){
 const React = require("react");
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.YEAR2_UNITS = exports.VOCABULARY = void 0;
+exports.YEAR4_UNITS = exports.YEAR3_UNITS = exports.YEAR2_UNITS = exports.VOCABULARY = void 0;
 exports.defaultUnitOptionForMode = defaultUnitOptionForMode;
 exports.unitOptionsForLevel = unitOptionsForLevel;
 exports.resolveUnits = resolveUnits;
@@ -1291,26 +1384,30 @@ exports.getVocabularyKeys = getVocabularyKeys;
 exports.getVocabularyCount = getVocabularyCount;
 exports.validateVocabulary = validateVocabulary;
 const year2Vocabulary_1 = require("./year2Vocabulary");
-exports.VOCABULARY = [...year2Vocabulary_1.YEAR2_VOCABULARY];
+const year34Vocabulary_1 = require("./year34Vocabulary");
+const ALL_UNITS = [...year2Vocabulary_1.YEAR2_VOCABULARY, ...year34Vocabulary_1.YEAR3_VOCABULARY, ...year34Vocabulary_1.YEAR4_VOCABULARY];
+exports.VOCABULARY = ALL_UNITS;
 exports.YEAR2_UNITS = year2Vocabulary_1.YEAR2_VOCABULARY;
+exports.YEAR3_UNITS = year34Vocabulary_1.YEAR3_VOCABULARY;
+exports.YEAR4_UNITS = year34Vocabulary_1.YEAR4_VOCABULARY;
 function defaultUnitOptionForMode(mode) {
-    return "all-y2";
+    return "all-y2-y4";
 }
 function unitOptionsForLevel(level) {
-    return [{ id: "all-y2", label: "Year 2 Vocabulary", unitIds: year2Vocabulary_1.YEAR2_VOCABULARY.map((u) => u.id) }];
+    return [{ id: "all-y2-y4", label: "Year 2–4 Vocabulary", unitIds: ALL_UNITS.map((u) => u.id) }];
 }
 function resolveUnits(unitOptionId) {
-    return year2Vocabulary_1.YEAR2_VOCABULARY;
+    return ALL_UNITS;
 }
 function unitsForMode(mode) {
-    return year2Vocabulary_1.YEAR2_VOCABULARY;
+    return ALL_UNITS;
 }
 function masteryWordKey(answer) {
     return answer.trim().toLowerCase();
 }
 function getVocabularyKeys(mode) {
     const seen = new Set();
-    for (const unit of year2Vocabulary_1.YEAR2_VOCABULARY) {
+    for (const unit of ALL_UNITS) {
         for (const word of unit.words)
             seen.add(masteryWordKey(word.answer));
     }
@@ -1324,7 +1421,7 @@ function validateVocabulary() {
         return true;
     const errors = [];
     const seen = new Set();
-    for (const unit of year2Vocabulary_1.YEAR2_VOCABULARY) {
+    for (const unit of ALL_UNITS) {
         for (const word of unit.words) {
             if (!word.answer || word.answer.trim() === "")
                 errors.push(`Blank answer in ${unit.id}`);
@@ -1334,12 +1431,12 @@ function validateVocabulary() {
                 errors.push(`Blank description in ${unit.id} for "${word.answer}"`);
             const key = masteryWordKey(word.answer);
             if (seen.has(key))
-                errors.push(`Duplicate Year 2 word: ${word.answer}`);
+                errors.push(`Duplicate vocabulary word: ${word.answer}`);
             seen.add(key);
         }
     }
-    if (getVocabularyCount("year2") < 100)
-        errors.push("Year 2 vocabulary pool should contain at least 100 unique words");
+    if (getVocabularyCount("year2") < 600)
+        errors.push("Expanded Year 2–4 vocabulary pool should contain at least 600 unique words");
     if (errors.length > 0) {
         console.error("[VOCAVIA] Vocabulary validation failed:\n" + errors.join("\n"));
         return false;
@@ -1348,8 +1445,7 @@ function validateVocabulary() {
 }
 validateVocabulary();
 
-};
-__mods["src/data/year2Vocabulary.ts"] = function(require,module,exports){
+};__mods["src/data/year2Vocabulary.ts"] = function(require,module,exports){
 const React = require("react");
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1611,7 +1707,7 @@ const MASTERY_MILESTONES = new Set([50, 100, 150, 200]);
 function masteryTitle(mode, count, complete) {
     if (!complete)
         return `${count} Word Mastery`;
-    return "Year 2 Vocabulary Master";
+    return "Year 2–4 Vocabulary Master";
 }
 function makeCertificate(mode, count, total, awardedTo, complete) {
     return {
@@ -1658,6 +1754,8 @@ function useGameState(initialSettings) {
     const [bestStreak, setBestStreak] = (0, react_1.useState)(0);
     const [hintsUsedThisAttempt, setHintsUsedThisAttempt] = (0, react_1.useState)(0);
     const [audioHintUnlocked, setAudioHintUnlocked] = (0, react_1.useState)(false);
+    const [currentWordSeenBefore, setCurrentWordSeenBefore] = (0, react_1.useState)(false);
+    const encounteredWordsRef = (0, react_1.useRef)(new Set());
     const [syncStatus, setSyncStatus] = (0, react_1.useState)("online");
     const [masteredWords, setMasteredWords] = (0, react_1.useState)(new Set());
     const masteredWordsRef = (0, react_1.useRef)(new Set());
@@ -1734,9 +1832,11 @@ function useGameState(initialSettings) {
         setPhase("feedback");
         setAttemptCount((c) => c + 1);
         setStreaks([0, 0]);
+        if (word)
+            encounteredWordsRef.current.add((0, vocabulary_1.masteryWordKey)(word.answer));
         queueAndSyncResult(false);
         sound.play("timeup");
-    }, [queueAndSyncResult, sound]);
+    }, [queueAndSyncResult, sound, word]);
     (0, react_1.useEffect)(() => {
         if (timeRemaining !== 0 || !timerActive)
             return;
@@ -1762,6 +1862,7 @@ function useGameState(initialSettings) {
         setLastPoints(0);
         setHintsUsedThisAttempt(0);
         setAudioHintUnlocked(false);
+        setCurrentWordSeenBefore(false);
         currentEventIdRef.current = null;
         scoringDoneRef.current = false;
         attemptProcessedRef.current = false;
@@ -1797,6 +1898,7 @@ function useGameState(initialSettings) {
         const loaded = new Set((progress.masteredWords || []).filter((key) => valid.has(key)));
         masteredWordsRef.current = loaded;
         setMasteredWords(loaded);
+        encounteredWordsRef.current = new Set((progress.encounteredWords || []).filter((key) => valid.has(key)));
         const total = (0, vocabulary_1.getVocabularyCount)("year2");
         if (loaded.size >= total) {
             setMasteryCertificate(makeCertificate("year2", total, total, pupil.name, true));
@@ -1833,7 +1935,9 @@ function useGameState(initialSettings) {
             sound.play("winner");
             return;
         }
+        const chosenKey = (0, vocabulary_1.masteryWordKey)(chosen.answer);
         setWord(chosen);
+        setCurrentWordSeenBefore(encounteredWordsRef.current.has(chosenKey));
         setTiles(initTiles(chosen));
         setFeedback(null);
         setLastPoints(0);
@@ -1903,7 +2007,8 @@ function useGameState(initialSettings) {
     const useHint = (0, react_1.useCallback)(() => {
         if (phase !== "answering" || !word || hintsRemaining[0] <= 0)
             return;
-        if (hintsUsedThisAttempt < 2) {
+        const useVoiceForThisHint = currentWordSeenBefore && hintsUsedThisAttempt >= 2;
+        if (!useVoiceForThisHint) {
             const targetIndex = findHintableTile(tiles);
             if (targetIndex !== -1) {
                 const positions = letterPositions(word);
@@ -1926,7 +2031,7 @@ function useGameState(initialSettings) {
         setHintsRemaining((prev) => [Math.max(0, prev[0] - 1), 0]);
         setHintsUsedThisAttempt((count) => Math.min(3, count + 1));
         sound.play("reveal");
-    }, [phase, word, hintsRemaining, hintsUsedThisAttempt, tiles, findHintableTile, letterPositions, sound]);
+    }, [phase, word, hintsRemaining, hintsUsedThisAttempt, currentWordSeenBefore, tiles, findHintableTile, letterPositions, sound]);
     const speakWord = (0, react_1.useCallback)(() => {
         if (!audioHintUnlocked || !word || typeof window === "undefined" || !("speechSynthesis" in window))
             return;
@@ -1973,6 +2078,7 @@ function useGameState(initialSettings) {
         sound.play("click");
         const guess = normalize(reconstructAnswer(word, tiles));
         const answer = normalize(word.answer);
+        encounteredWordsRef.current.add((0, vocabulary_1.masteryWordKey)(word.answer));
         setAttemptCount((count) => count + 1);
         if (guess === answer) {
             if (!scoringDoneRef.current) {
@@ -2145,7 +2251,7 @@ function useGameState(initialSettings) {
     return {
         phase, settings, scores, round, roundStartingPlayer: "player1", answeringPlayer: "player1", word, tiles, feedback, lastPoints,
         attempt: "first", passedAlready: false, correctCount, attemptCount, availablePoints, muted, reducedMotion, pickerActive,
-        hintsRemaining, streaks, bestStreak, hintsUsedThisAttempt, audioHintUnlocked, syncStatus, canUseHint, timeRemaining,
+        hintsRemaining, streaks, bestStreak, hintsUsedThisAttempt, audioHintUnlocked, currentWordSeenBefore, syncStatus, canUseHint, timeRemaining,
         masteryCount, masteryTotal, masteryCertificate, sound, allTilesFilled, startGame, beginRound, startPick, finishPick,
         enterLetter, backspace, clearAnswer, submit, useHint, speakWord, nextRound, passWord: () => { }, startPassedAttempt: () => { },
         revealAndEndRound, pause, resume, handleFeedbackContinue, handleRoundCompleteContinue, continueAfterMasteryCertificate,
