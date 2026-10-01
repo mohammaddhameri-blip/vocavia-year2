@@ -1224,7 +1224,12 @@ function SetupModal({ initial, onStart }) {
 function leaderboardGivenName(name) {
     const clean = String(name ?? "").trim();
     const given = clean.replace(/\s+(?:BIN|BINTI)\s+.*$/i, "").trim();
-    return given || clean || "Pupil";
+    const parts = given.split(/\s+/).filter(Boolean);
+    const shortened = parts
+        .filter((part) => !/^(?:MOHAMAD|MOHAMMAD|MUHAMAD|MUHAMMAD|MOHAMED|MUHAMED)$/i.test(part.replace(/[.,]/g, "")))
+        .join(" ")
+        .trim();
+    return shortened || given || clean || "Pupil";
 }
 function leaderboardMasteryRank(count, total) {
     const safeCount = Math.max(0, Math.min(Number(count) || 0, total));
@@ -1315,9 +1320,9 @@ function LeaderboardModal({ data, onClose, onReload }) {
                 React.createElement("div", { className: "space-y-2" }, rows.map((row) => (React.createElement("div", { key: row.studentId, className: `grid grid-cols-[46px_1fr_auto] items-center gap-2 md:gap-4 rounded-xl border px-3 md:px-4 py-3 ${row.isMe ? "bg-gold/15 border-gold/70 panel-glow" : "bg-bg-deep/35 border-cream/10"}` },
                     React.createElement("div", { className: `text-center font-display font-extrabold text-lg ${row.rank <= 3 ? "text-gold-bright" : "text-cream/55"}` }, `#${row.rank}`),
                     React.createElement("div", { className: "min-w-0" },
-                        React.createElement("div", { className: `font-display font-bold leading-tight whitespace-normal break-words ${row.isMe ? "text-gold-bright" : "text-cream"}` }, leaderboardGivenName(row.name)),
+                        React.createElement("div", { className: `font-display font-bold leading-tight text-sm md:text-base whitespace-normal break-normal [overflow-wrap:normal] [word-break:normal] ${row.isMe ? "text-gold-bright" : "text-cream"}` }, leaderboardGivenName(row.name)),
                         React.createElement("div", { className: "text-cream/40 text-[10px] md:text-xs uppercase tracking-wider" }, row.className, row.isTester ? " · TESTER" : "", row.isMe ? " · YOU" : "")),
-                    React.createElement("div", { className: "text-right font-display font-extrabold text-sm md:text-base text-cream whitespace-nowrap" }, valueFor(row))))))))));
+                    React.createElement("div", { className: "text-right font-display font-extrabold text-[11px] sm:text-xs md:text-base text-cream whitespace-nowrap" }, valueFor(row))))))))));
 }
 
 };
